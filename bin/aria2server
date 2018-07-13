@@ -1,0 +1,2 @@
+#!/bin/sh
+aria2c --http-user=alex --http-passwd=secur@2521 "$1"

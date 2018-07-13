@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+set -e
+
+
+PRINTER_MODEL=HL2270dw
+BASE_CMD=lpr
+DUPLEX=0
+PRINT_OPTIONS=
+SERVER=192.168.11.21
+SERVER_USER="popcorn"
+SERVER_TMP_DIR="/home/$SERVER_USER/.print_tmp"
+
+ME=$(basename $0)
+
+print_usage() {
+  echo "$ME: shitty printer script"
+  echo "syntax: $ME [options] file"
+  echo "        $ME --help  (show this)"
+  echo ""
+  echo "options:"
+  echo "  --duplex|-d      print double sided"
+  echo ""
+  echo "Good luck!"
+}
+
+die() {
+  echo "$ME: error: $1" 1>&2
+  exit 1
+}
+
+OPTIONS="hd"
+LONGOPTIONS="help,duplex"
+
+PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "$0" -- "$@")
+if [[ $? -ne 0 ]]; then
+    exit 2
+fi
+
+eval set -- "$PARSED"
+
+while true; do
+  case "$1" in
+    -d|--duplex)
+      DUPLEX=1
+      shift
+      ;;
+    -h|--help)
+      print_usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      die "unknown option: $1"
+      ;;
+  esac
+done
+
+if [[ $# -ne 1 ]]; then
+  die "a single input file is required."
+fi
+
+file=$1
+
+if [[ $DUPLEX -eq 1 ]]
+then PRINT_OPTIONS="$PRINT_OPTIONS -o sides=two-sided-long-edge"
+fi
+
+server_file="$SERVER_TMP_DIR/$(basename "$file")"
+server_file=${server_file// /_}
+scp_cmd="scp \"$file\" $SERVER_USER@$SERVER:$server_file"
+cmd="$BASE_CMD -P $PRINTER_MODEL $PRINT_OPTIONS"
+ssh_cmd="ssh $SERVER_USER@$SERVER -f $cmd $server_file"
+
+echo $scp_cmd
+eval $scp_cmd
+echo $ssh_cmd
+eval $ssh_cmd
+

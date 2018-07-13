@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+sudo netctl stop-all
+echo "Connecting to $1..."
+sudo netctl start "$1"
